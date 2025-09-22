@@ -1,0 +1,7 @@
+__pycache__/
+.ruff_cache/
+.venv/
+
+structure.txt
+data/
+jupyter_space/
