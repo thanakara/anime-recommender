@@ -224,8 +224,7 @@ class DatasetContext:
         self.log.info("Writing test in libSVM format")
         datasets.dump_svmlight_file(X=X[train_size:], y=y[train_size:], f=test_filename)
 
-    def _create_categorical_mappings(self) -> list[pd.DataFrame]:
-        *_, encoder = self._one_hot_encode()
+    def _create_categorical_mappings(self) -> tuple[pd.DataFrame]:
         unique_users = self.data.user_id.unique()
         unique_anime = self.data.anime_id.unique()
         cat_userID_to_userIndex = pd.DataFrame(
@@ -234,8 +233,15 @@ class DatasetContext:
         cat_animeID_to_animeIndex = pd.DataFrame(
             data={"user_id": np.ones(shape=[len(unique_anime)], dtype=np.int32), "anime_id": unique_anime}
         )
-        X_user = self._encoder.transform(cat_userID_to_userIndex[self._cols])
-        X_anime = self._encoder.transform(cat_animeID_to_animeIndex[self._cols])
+        return cat_userID_to_userIndex, cat_animeID_to_animeIndex
+
+    def create_lookup_files(self) -> None:
+        *_, encoder = self._one_hot_encode()
+        cat_userID_to_userIndex, cat_animeID_to_animeIndex = self._create_categorical_mappings()
+        unique_users = self.data.user_id.unique()
+        unique_anime = self.data.anime_id.unique()
+        X_user = encoder.transform(cat_userID_to_userIndex[self._cols])
+        X_anime = encoder.transform(cat_animeID_to_animeIndex[self._cols])
 
         datasets.dump_svmlight_file(
             X=X_user, y=unique_users, f=self._DATAPATH.joinpath("ohe-users.svmlight").as_posix()
