@@ -27,7 +27,7 @@ An extra file is created: `dimension.txt`,\
 which will be used in the Training Job, so ignore this for now.
 
 To get the splitted training and testing data in CSV format, use:\
-`$recomm data --split <train-size>`
+`$recomm data --split true --ratio <train-split> --seed <seed>`
 
 <hr>
 
@@ -67,8 +67,11 @@ Overall the commands in this group are:
 
 - `data`
     + options:
-        * `--raw`
-        * `--split`
+        * `--raw`:
+            * `--output`
+        * `--split`:
+            * `--split`
+            * `--seed`
 - `recordio`
     + options:
         * `--output`
