@@ -122,7 +122,7 @@ class DatasetProcessor:
 
         # Write only: animeID, anime-name, genres
         with alive_bar(spinner="classic") as bar:
-            merge_pd[["anime_id", "anime", "genres"]].to_csv(fullpath)
+            merge_pd[["anime_id", "anime", "genres"]].to_csv(fullpath, index=False)
             bar()
 
         unique_users = merge_pd.user_id.unique()
@@ -172,9 +172,9 @@ class DatasetContext:
         if write:
             self.log.debug(f"Training Size: {train_size:_}")
             self.log.info("Writing train CSV file")
-            df_perm[self._cols].iloc[:train_size].to_csv(train_filename)
+            df_perm[self._cols].iloc[:train_size].to_csv(train_filename, index=False)
             self.log.info("Writing test CSV file")
-            df_perm[self._cols].iloc[train_size:].to_csv(test_filename)
+            df_perm[self._cols].iloc[train_size:].to_csv(test_filename, index=False)
 
         self._train_size = train_size
 
