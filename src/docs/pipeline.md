@@ -9,9 +9,11 @@ Make sure it's placed in on this filepath:\
 
 Alternatively, using `$uv run dvc pull`, DVC fetches the zip file instantly, since it's already pushed in a personal GoogleDrive using a specific version of it.
 
-However a JSON file is needed, in order to achieve this. It's under `.dvc/config.local` since `--local` tag was used in the command:\
-`$uv run dvc remote modify --local storage \ gdrive_service_account_json_file_path <path-to-json-file>`.\
-It's recommended to simply *download* the file since it will be easier, although the versions might differ since these datasets tend to get often updated.
+However a GoogleDrive Service Account JSON file is needed, in order to achieve this. It's under `.dvc/config.local` since `--local` tag was used in the command:\
+`$uv run dvc remote modify --local storage \ gdrive_service_account_json_file_path <path-to-json-file>`.
+
+
+It's recommended to simply *download* the file since it will be easier, although the versions might differ since these datasets tend to get often updated. Also, *uploading* it to AWS takes several minutes.
 
 <hr>
 
@@ -20,14 +22,14 @@ It's recommended to simply *download* the file since it will be easier, although
 This project has a script pointing to the `__main__.cli` function, with name **recomm**, which is under the `@click.group()` decorator.
 
 In order to get the raw data in CSV format, simply use:\
-`$recomm data --raw true -fn <name-of-your-csv-file.csv>`\
+`$recomm data --raw -o <name-of-your-csv-file.csv>`\
 The default value of the CSV file is: "anime-genre.csv".\
 This file will be used later, in the prediction stage.\
 An extra file is created: `dimension.txt`,\
 which will be used in the Training Job, so ignore this for now.
 
 To get the splitted training and testing data in CSV format, use:\
-`$recomm data --split true --ratio <train-split> --seed <seed>`
+`$recomm data --split --ratio <train-split> --seed <seed>`
 
 <hr>
 
@@ -66,18 +68,17 @@ Overall the commands in this group are:
 
 
 - `data`
-    + options:
+    + flags:
         * `--raw`:
-            * `--output`
+                options:
+                    * `--output`
         * `--split`:
-            * `--split`
-            * `--seed`
+                options:
+                    * `--split`
+                    * `--seed`
 - `recordio`
-    + options:
-        * `--output`
+    + options: `--output`
 - `svm`
-    + options:
-        * `--output`
+    + options: `--output`
 - `lookup`
-    + options:
-        * `--output`
+    + options: `--output`
