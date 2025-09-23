@@ -46,7 +46,8 @@ class DatasetLoader:
 
         if not self._extracted:
             self._unpack_archive()
-        return [pd.read_csv(self.data_raw.joinpath(csv.name)) for csv in self.data_raw.iterdir()]
+        # return [pd.read_csv(self.data_raw.joinpath(csv.name)) for csv in self.data_raw.iterdir()]
+        return [pd.read_csv(self.data_raw.joinpath(csv)) for csv in ("anime.csv", "rating_complete.csv")]
 
 
 class DatasetProcessor:
