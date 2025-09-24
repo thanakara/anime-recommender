@@ -7,7 +7,7 @@ from logging.config import dictConfig
 import yaml
 
 
-class EventCB:
+class EventsCallback:
     """Custom Callback that can be reconfigured from any YAML file."""
 
     _configured = False

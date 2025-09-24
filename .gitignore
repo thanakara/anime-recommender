@@ -3,9 +3,8 @@ __pycache__/
 .venv/
 
 structure.txt
-jupyter_space/
+jupyter-space/
 raw/
-train-and-inference/
-train-inference/
+train+inference/
 
 /dvc-storage.json

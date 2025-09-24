@@ -1,0 +1,17 @@
+source: s3
+region: eu-north-1
+s3_bucket_name: ars-bucket-sagemaker
+train_key: anime/user-anime-train.recordio
+test_key: anime/user-anime-test.recordio
+
+job_name: fm-anime-recomm-v1
+endpoint_name: ${oc.select:job_name, ???}
+
+s3_model_output: s3://${s3_bucket_name}/model/
+s3_training_file: s3://${s3_bucket_name}/${train_key}
+s3_test_file: s3://${s3_bucket_name}/${test_key}
+
+use_spot_instances: true
+max_run: 3600
+max_wait: ${oc.select:max_run, ???}
+checkpoint_uri: s3://${s3_bucket_name}/checkpoints/${job_name}

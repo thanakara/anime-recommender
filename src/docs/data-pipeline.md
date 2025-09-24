@@ -19,17 +19,17 @@ It's recommended to simply *download* the file since it will be easier, although
 
 ### 2. Raw
 
-This project has a script pointing to the `__main__.cli` function, with name **recomm**, which is under the `@click.group()` decorator.
+This project has a script pointing to the `__main__.data` function, with name **ars-data**, which is a `click.group`.
 
 In order to get the raw data in CSV format, simply use:\
-`$recomm data --raw -o <name-of-your-csv-file.csv>`\
+`$ars-data load -o <name-of-raw-csv-file.csv>`\
 The default value of the CSV file is: "anime-genre.csv".\
 This file will be used later, in the prediction stage.\
 An extra file is created: `dimension.txt`,\
 which will be used in the Training Job, so ignore this for now.
 
 To get the splitted training and testing data in CSV format, use:\
-`$recomm data --split --ratio <train-split> --seed <seed>`
+`$ars-data split --ratio <train-split-ratio> --seed <your-seed>`
 
 <hr>
 
@@ -43,12 +43,14 @@ Factorization Machines need:
 
 
 To create training and testing recordio files, you can use:\
-`$recomm recordio -o <recordio-filename>`
+`$ars-data recordio-format --ratio <train-split-ratio> --seed <your-seed>`
 
-**NOTE**: This process takes a while since the Compressed Sparse Matrix is large.
+**SIDEBAR**
+1) This process takes a while since the Compressed Sparse Matrix is huge.
+2) Keep the ratio and seed consistent through out all the steps.
 
 Moreover, these extra `svmlight` files need to be created, using:\
-`$recomm svm -o <svmlight-filename>`
+`$ars-data svm-format --ratio <train-split-ratio> --seed <your-seed>`
 
 <hr>
 
@@ -60,25 +62,6 @@ We'll create two lookup files:
 - Categorical UserID and corresponding UserIndex in One-hot Encoded table
 
 Both files should be saved in `svmlight` format. Use:\
-`$recomm lookup -o <svmlight-filename>`
+`$ars-data lookup-files --ratio <train-split-ratio> --seed <your-seed>`
 
-<hr>
-
-Overall the commands in this group are:
-
-
-- `data`
-    + flags:
-        * `--raw`:
-                options:
-                    * `--output`
-        * `--split`:
-                options:
-                    * `--split`
-                    * `--seed`
-- `recordio`
-    + options: `--output`
-- `svm`
-    + options: `--output`
-- `lookup`
-    + options: `--output`
+Again, keep the train split ratio and seed consistent across all steps.

@@ -24,8 +24,9 @@ class DatasetLoader:
 
     def _unpack_archive(self) -> None:
         """Unpacks the ZipFile and keeps only neccessary files."""
+
         if not self._extracted:
-            self.log.info("Unpacking Archive @on_job_start")
+            self.log.info("===== Unpack Archive Job =====")
             shutil.unpack_archive(
                 filename=self.archive_path,
                 extract_dir=self.data_raw,
@@ -33,19 +34,20 @@ class DatasetLoader:
             )
             for file_ in self.data_raw.iterdir():
                 if file_.name == "html folder":
-                    self.log.debug(f"Remove tree {file_.name}")
+                    self.log.debug(f"Removing tree {file_.name}")
                     shutil.rmtree(file_, ignore_errors=True)
                 elif file_.name not in ("anime.csv", "rating_complete.csv"):
-                    self.log.debug(f"Unlink file {file_.name}")
+                    self.log.debug(f"Unlinking file {file_.name}")
                     Path.unlink(file_)
             self._extracted = True
-        self.log.info("Unpacking Archive @on_job_end")
 
     def load_pandas_data_frames(self) -> list[pd.DataFrame]:
         """Returns the neccessary DataFrames"""
 
         if not self._extracted:
             self._unpack_archive()
+
+        # NOTE: on the cloud the ordering shifts --can't use .iterdir() method
         # return [pd.read_csv(self.data_raw.joinpath(csv.name)) for csv in self.data_raw.iterdir()]
         return [pd.read_csv(self.data_raw.joinpath(csv)) for csv in ("anime.csv", "rating_complete.csv")]
 
@@ -79,7 +81,7 @@ class DatasetProcessor:
         INNER JOIN anime_pd anm
             ON rate.anime_id = anm.MAL_ID
         """
-        self.log.info("Join Tables @on_job_start")
+        self.log.info("===== Join Tables Job =====")
         merge = pd.merge(
             left=self.ratings_pd[["rating", "user_id", "anime_id"]],
             right=self.anime_pd[["MAL_ID", "Name", "Genres", "Score"]],
@@ -99,7 +101,6 @@ class DatasetProcessor:
         merge.rating = merge.rating.astype(np.float32)
         records = len(merge)
         self.log.debug(f"Total records: {records:_}")
-        self.log.info("Join Tables @on_job_end")
         return merge
 
     def save_to_csv(self, filename: str | Path) -> None:
@@ -114,12 +115,12 @@ class DatasetProcessor:
         """
         filename = Path(filename)
         assert filename.suffix == ".csv"
-        train_and_inference_dir = Path("src") / "anime_recommender" / "data" / "train-and-inference"
+        train_and_inference_dir = Path("src") / "anime_recommender" / "data" / "train+inference"
         if not train_and_inference_dir.exists():
             train_and_inference_dir.mkdir(parents=True, exist_ok=True)
         fullpath = train_and_inference_dir.joinpath(filename)
         merge_pd = self._merge()
-        self.log.info("Save Join Table to CSV @on_job_start")
+        self.log.info("===== Save Raw CSV Job =====")
 
         # Write only: animeID, anime-name, genres
         with alive_bar(spinner="classic") as bar:
@@ -132,7 +133,6 @@ class DatasetProcessor:
 
         with fullpath.with_name("dimension.txt").open("w") as f:
             f.write(str(anime_dimension))
-        self.log.info("Save Join Table to CSV @on_job_end")
 
 
 class DatasetContext:
@@ -140,7 +140,10 @@ class DatasetContext:
     | Class used to create all the necessary files needed for inference and training |
     +------------------------------------------------------------------------------"""
 
-    _DATAPATH = Path("src") / "anime_recommender" / "data" / "train-and-inference"
+    _DATAPATH = Path("src") / "anime_recommender" / "data" / "train+inference"
+    if not _DATAPATH.exists():
+        _DATAPATH.mkdir(parents=True, exist_ok=True)
+
     _cols = ["user_id", "anime_id"]
     _encodings = None
     _encoder = None
@@ -149,7 +152,7 @@ class DatasetContext:
         self.log = log
         self.data = data
         self.train_split_ratio = train_split_ratio
-        self.seed = 42
+        self.seed = seed
 
     def _permute(self) -> pd.DataFrame:
         """Returns the dataset permuted on some seed"""
@@ -172,9 +175,15 @@ class DatasetContext:
 
         if write:
             self.log.debug(f"Training Size: {train_size:_}")
-            self.log.info("Writing train CSV file")
-            df_perm[self._cols].iloc[:train_size].to_csv(train_filename, index=False)
-            self.log.info("Writing test CSV file")
+            self.log.info("===== Write train CSV Job =====")
+
+            with alive_bar(spinner="classic") as bar:
+                df_perm[self._cols].iloc[:train_size].to_csv(train_filename, index=False)
+                bar()
+            self.log.info("===== Write test CSV Job =====")
+
+            with alive_bar(spinner="classic") as bar:
+                bar()
             df_perm[self._cols].iloc[train_size:].to_csv(test_filename, index=False)
 
         self._train_size = train_size
@@ -182,9 +191,9 @@ class DatasetContext:
     def _one_hot_encode(self):  # TODO: Returning hints
         """
         Returns:
-            - one-hot encodings of the permuted dataset
-            - target as Float32
-            - the encoder itself
+            + one-hot encodings of the permuted dataset
+            + target as Float32
+            + the encoder itself
         """
 
         df_perm = self._permute()
@@ -201,29 +210,35 @@ class DatasetContext:
 
     def make_recordio_files(self) -> None:
         X, y, _ = self._one_hot_encode()
-        train_size = self.split_and_write_train_test(write=False)
+        self.split_and_write_train_test(write=False)
+        train_size = self._train_size
         train_filename = self._DATAPATH.joinpath("user-anime-train.recordio")
         test_filename = self._DATAPATH.joinpath("user-anime-test.recordio")
-        self.log.info("Writing RecordIO for training")
-        self.log.warning("This process takes a while")
+        self.log.info("====== Write train RecordIO Job =====")
+        self.log.warning("This process may take several minutes")
         with alive_bar() as bar:
             self._write_sparse_recordio_file(filename=train_filename, X=X[:train_size], y=y[:train_size])
             bar()
-        self.log.info("Writing RecordIO for testing")
+        self.log.info("====== Write test RecordIO Job ======")
         with alive_bar() as bar:
-            self._write_sparse_recordio_file(filename=test_filename, X=X[:train_size], y=y[:train_size])
+            self._write_sparse_recordio_file(filename=test_filename, X=X[train_size:], y=y[train_size:])
             bar()
-        self.log.info("Job ended")
 
     def make_svmlight_files(self) -> None:
         X, y, _ = self._one_hot_encode()
-        train_size = self.split_and_write_train_test(write=False)
+        self.split_and_write_train_test(write=False)
+        train_size = self._train_size
         train_filename = self._DATAPATH.joinpath("user-anime-train.svmlight").as_posix()
         test_filename = self._DATAPATH.joinpath("user-anime-test.svmlight").as_posix()
-        self.log.info("Writing train in libSVM format")
-        datasets.dump_svmlight_file(X=X[:train_size], y=y[:train_size], f=train_filename)
-        self.log.info("Writing test in libSVM format")
-        datasets.dump_svmlight_file(X=X[train_size:], y=y[train_size:], f=test_filename)
+
+        self.log.info("====== Write train libSVM Job ======")
+        with alive_bar() as bar:
+            datasets.dump_svmlight_file(X=X[:train_size], y=y[:train_size], f=train_filename)
+            bar()
+        self.log.info("====== Write test libSVM Job ======")
+        with alive_bar() as bar:
+            datasets.dump_svmlight_file(X=X[train_size:], y=y[train_size:], f=test_filename)
+            bar()
 
     def _create_categorical_mappings(self) -> tuple[pd.DataFrame]:
         unique_users = self.data.user_id.unique()
@@ -244,9 +259,12 @@ class DatasetContext:
         X_user = encoder.transform(cat_userID_to_userIndex[self._cols])
         X_anime = encoder.transform(cat_animeID_to_animeIndex[self._cols])
 
-        datasets.dump_svmlight_file(
-            X=X_user, y=unique_users, f=self._DATAPATH.joinpath("ohe-users.svmlight").as_posix()
-        )
-        datasets.dump_svmlight_file(
-            X=X_anime, y=unique_anime, f=self._DATAPATH.joinpath("ohe-anime.svmlight").as_posix()
-        )
+        self.log.info("===== Crete Lookup files Job ======")
+        with alive_bar(spinner="classic") as bar:
+            datasets.dump_svmlight_file(
+                X=X_user, y=unique_users, f=self._DATAPATH.joinpath("ohe-users.svmlight").as_posix()
+            )
+            datasets.dump_svmlight_file(
+                X=X_anime, y=unique_anime, f=self._DATAPATH.joinpath("ohe-anime.svmlight").as_posix()
+            )
+            bar()
