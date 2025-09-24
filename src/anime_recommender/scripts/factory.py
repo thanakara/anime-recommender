@@ -1,12 +1,12 @@
 import logging
-import pathlib
 
 from anime_recommender.scripts import setup
+from anime_recommender.constants import core
 
 
 def context_factory(log: logging.Logger, ratio: float, seed: int) -> setup.DatasetContext:
-    archive_path = pathlib.Path("src") / "anime_recommender" / "data" / "archive.zip"
-    dataraw_path = pathlib.Path("src") / "anime_recommender" / "data" / "raw"
+    archive_path = core.Filepath.archive_path
+    dataraw_path = core.Filepath.data_raw
     assert dataraw_path.exists(), f"{str(dataraw_path)} doesn't exist"
 
     loader = setup.DatasetLoader(log=log, archive_path=archive_path)

@@ -10,6 +10,8 @@ import sagemaker.amazon.common as smac
 from sklearn import datasets, preprocessing
 from alive_progress import alive_bar
 
+from anime_recommender.constants import core
+
 
 class DatasetLoader:
     """---------------------------------------------------+
@@ -19,7 +21,7 @@ class DatasetLoader:
     def __init__(self, log: logging.Logger, archive_path: Path) -> None:
         self.log = log
         self.archive_path = archive_path
-        self.data_raw = Path("src") / "anime_recommender" / "data" / "raw"
+        self.data_raw = core.Filepath.data_raw
         self._extracted = False
 
     def _unpack_archive(self) -> None:
@@ -118,7 +120,7 @@ class DatasetProcessor:
         """
         filename = Path(filename)
         assert filename.suffix == ".csv"
-        train_and_inference_dir = Path("src") / "anime_recommender" / "data" / "train+inference"
+        train_and_inference_dir = core.Filepath.train_and_inference_dir
         if not train_and_inference_dir.exists():
             train_and_inference_dir.mkdir(parents=True, exist_ok=True)
         fullpath = train_and_inference_dir.joinpath(filename)
@@ -143,7 +145,7 @@ class DatasetContext:
     | Class used to create all the necessary files needed for inference and training |
     +------------------------------------------------------------------------------"""
 
-    _DATAPATH = Path("src") / "anime_recommender" / "data" / "train+inference"
+    _DATAPATH = core.Filepath.train_and_inference_dir
     if not _DATAPATH.exists():
         _DATAPATH.mkdir(parents=True, exist_ok=True)
 
@@ -201,7 +203,7 @@ class DatasetContext:
 
         df_perm = self._permute()
         if self._encoder is None:
-            self.log.info("Encoding the dataset")
+            self.log.info("===== One Hot Encode Job =====")
             self._encoder = preprocessing.OneHotEncoder(dtype=np.float32)
             self._encodings = self._encoder.fit_transform(df_perm[self._cols])
         return self._encodings, df_perm.rating.values.astype(np.float32), self._encoder
@@ -217,12 +219,12 @@ class DatasetContext:
         train_size = self._train_size
         train_filename = self._DATAPATH.joinpath("user-anime-train.recordio")
         test_filename = self._DATAPATH.joinpath("user-anime-test.recordio")
-        self.log.info("====== Write train RecordIO Job =====")
+        self.log.info("===== Write train RecordIO Job =====")
         self.log.warning("This process may take several minutes")
         with alive_bar() as bar:
             self._write_sparse_recordio_file(filename=train_filename, X=X[:train_size], y=y[:train_size])
             bar()
-        self.log.info("====== Write test RecordIO Job ======")
+        self.log.info("===== Write test RecordIO Job =====")
         with alive_bar() as bar:
             self._write_sparse_recordio_file(filename=test_filename, X=X[train_size:], y=y[train_size:])
             bar()
@@ -234,11 +236,11 @@ class DatasetContext:
         train_filename = self._DATAPATH.joinpath("user-anime-train.svmlight").as_posix()
         test_filename = self._DATAPATH.joinpath("user-anime-test.svmlight").as_posix()
 
-        self.log.info("====== Write train libSVM Job ======")
+        self.log.info("===== Write train libSVM Job =====")
         with alive_bar() as bar:
             datasets.dump_svmlight_file(X=X[:train_size], y=y[:train_size], f=train_filename)
             bar()
-        self.log.info("====== Write test libSVM Job ======")
+        self.log.info("===== Write test libSVM Job =====")
         with alive_bar() as bar:
             datasets.dump_svmlight_file(X=X[train_size:], y=y[train_size:], f=test_filename)
             bar()
@@ -262,7 +264,7 @@ class DatasetContext:
         X_user = encoder.transform(cat_userID_to_userIndex[self._cols])
         X_anime = encoder.transform(cat_animeID_to_animeIndex[self._cols])
 
-        self.log.info("===== Crete Lookup files Job ======")
+        self.log.info("===== Create Lookup files Job =====")
         with alive_bar(spinner="classic") as bar:
             datasets.dump_svmlight_file(
                 X=X_user, y=unique_users, f=self._DATAPATH.joinpath("ohe-users.svmlight").as_posix()

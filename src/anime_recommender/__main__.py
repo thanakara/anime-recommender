@@ -6,11 +6,12 @@ import click
 from omegaconf import OmegaConf
 
 from anime_recommender.scripts import setup, factory, boto_sdk, callbacks, resolvers
+from anime_recommender.constants import core
 
 callback = callbacks.EventsCallback()
 log = callback.logger
-CONFIG = pathlib.Path("src") / "config" / "aws-uris.yaml"
-config = OmegaConf.load(CONFIG)
+file_ = core.Filepath.aws_uris_config_path
+config = OmegaConf.load(file_=file_)
 OmegaConf.register_new_resolver(name="region_resolver", resolver=resolvers.region_name_resolver)
 OmegaConf.register_new_resolver(name="role_resolver", resolver=resolvers.execution_role_resolver)
 
@@ -43,7 +44,7 @@ def rmtree(path: str, confirm: bool):
 def load(output: str):
     """Unpacks archive, joins the tables and writes CSV file."""
 
-    archive_path = pathlib.Path("src") / "anime_recommender" / "data" / "archive.zip"
+    archive_path = core.Filepath.archive_path
     ds_loader = setup.DatasetLoader(log=log, archive_path=archive_path)
     anime_pd, ratings_pd = ds_loader.load_pandas_data_frames()
     ds_processor = setup.DatasetProcessor(log=log, anime_pd=anime_pd, ratings_pd=ratings_pd)
