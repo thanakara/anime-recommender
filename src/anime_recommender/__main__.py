@@ -3,10 +3,16 @@ import pathlib
 
 import click
 
-from anime_recommender.scripts import setup, factory, callbacks
+from omegaconf import OmegaConf
+
+from anime_recommender.scripts import setup, factory, boto_sdk, callbacks, resolvers
 
 callback = callbacks.EventsCallback()
 log = callback.logger
+CONFIG = pathlib.Path("src") / "config" / "aws-uris.yaml"
+config = OmegaConf.load(CONFIG)
+OmegaConf.register_new_resolver(name="region_resolver", resolver=resolvers.region_name_resolver)
+OmegaConf.register_new_resolver(name="role_resolver", resolver=resolvers.execution_role_resolver)
 
 
 @click.group()
@@ -82,3 +88,20 @@ def lookup_files(ratio: float, seed: int):
 
     cxt_factory = factory.context_factory(log=log, ratio=ratio, seed=seed)
     cxt_factory.create_lookup_files()
+
+
+@s3.command()
+def create():
+    """Create S3-bucket. Name specified on YAML"""
+
+    boto_sdk.create_bucket(config=config)
+
+
+@s3.command()
+@click.option("-f", "--filename", type=click.Path(exists=True), required=True)
+@click.option("--key", type=click.STRING, required=True)
+def upload(filename: str, key: str):
+    """Upload file into desired S3-bucket"""
+
+    filename = pathlib.Path(filename)
+    boto_sdk.upload_to_s3(config=config, filename=filename, key=key)

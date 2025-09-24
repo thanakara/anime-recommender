@@ -1,5 +1,6 @@
 source: s3
-region: eu-north-1
+region: ${region_resolver:}
+role: ${role_resolver:}
 s3_bucket_name: ars-bucket-sagemaker
 train_key: anime/user-anime-train.recordio
 test_key: anime/user-anime-test.recordio
