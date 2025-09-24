@@ -81,6 +81,9 @@ class DatasetProcessor:
         INNER JOIN anime_pd anm
             ON rate.anime_id = anm.MAL_ID
         """
+
+        type_filter = self.anime_pd.Type == "TV"
+        self.anime_pd = self.anime_pd[type_filter]
         self.log.info("===== Join Tables Job =====")
         merge = pd.merge(
             left=self.ratings_pd[["rating", "user_id", "anime_id"]],
