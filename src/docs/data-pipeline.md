@@ -10,7 +10,7 @@ Make sure it's placed in on this filepath:\
 Alternatively, using `$uv run dvc pull`, DVC fetches the zip file instantly, since it's already pushed in a personal GoogleDrive using a specific version of it.
 
 However a GoogleDrive Service Account JSON file is needed, in order to achieve this. It's under `.dvc/config.local` since `--local` tag was used in the command:\
-`$uv run dvc remote modify --local storage \ gdrive_service_account_json_file_path <path-to-json-file>`.
+`$uv run dvc remote modify --local storage gdrive_service_account_json_file_path <path-to-json-file>`.
 
 
 It's recommended to simply *download* the file since it will be easier, although the versions might differ since these datasets tend to get often updated. Also, *uploading* it to AWS takes several minutes.

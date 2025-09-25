@@ -69,6 +69,14 @@ class DatasetProcessor:
         self.anime_pd = anime_pd
         self.ratings_pd = ratings_pd
 
+    def _filter_anime_on(self) -> pd.DataFrame:
+        """Filter out anime by type, year and score."""
+
+        anime_s = self.anime_pd[self.anime_pd.Score != "Unknown"].copy()
+        anime_s.Score = anime_s.Score.astype(float)
+        filter_ = (anime_s.Type == "Movie") & (anime_s.Aired.str.contains("201")) & (anime_s.Score >= 8.5)
+        return anime_s[filter_]
+
     def _merge(self) -> pd.DataFrame:
         """
         SELECT  rate.rating,
@@ -84,27 +92,25 @@ class DatasetProcessor:
             ON rate.anime_id = anm.MAL_ID
         """
 
-        type_filter = self.anime_pd.Type == "Movie"
-        self.anime_pd = self.anime_pd[type_filter]
+        anime_filtered = self._filter_anime_on()
         self.log.info("===== Join Tables Job =====")
         merge = pd.merge(
-            left=self.ratings_pd[["rating", "user_id", "anime_id"]],
-            right=self.anime_pd[["MAL_ID", "Name", "Genres", "Score"]],
-            left_on="anime_id",
-            right_on="MAL_ID",
+            left=anime_filtered[["MAL_ID", "Name", "Genres"]],
+            right=self.ratings_pd[["rating", "user_id", "anime_id"]],
+            left_on="MAL_ID",
+            right_on="anime_id",
         )
         # Processing the merged table
         merge.rename(
             columns={
-                "Name": "anime",
+                "Name": "name",
                 "Genres": "genres",
-                "Score": "score",
             },
             inplace=True,
         )
         merge.drop("MAL_ID", axis=1, inplace=True)
         merge.rating = merge.rating.astype(np.float32)
-        records = len(merge)
+        records, _ = merge.shape
         self.log.debug(f"Total records: {records:_}")
         return merge
 
@@ -112,7 +118,7 @@ class DatasetProcessor:
         """
         This method saves from the merged table, the columns:
             - anime_id
-            - anime
+            - name
             - genres,
         which will be used in the prediction stage.
         Also saves the anime-dimension in .txt file which will
@@ -129,7 +135,7 @@ class DatasetProcessor:
 
         # Write only: animeID, anime-name, genres
         with alive_bar(spinner="classic") as bar:
-            merge_pd[["anime_id", "anime", "genres"]].to_csv(fullpath, index=False)
+            merge_pd[["anime_id", "name", "genres"]].to_csv(fullpath, index=False)
             bar()
 
         unique_users = merge_pd.user_id.unique()
@@ -149,7 +155,7 @@ class DatasetContext:
     if not _DATAPATH.exists():
         _DATAPATH.mkdir(parents=True, exist_ok=True)
 
-    _cols = ["user_id", "anime_id"]  # columns used for encoding
+    _cols = ["user_id", "anime_id"]  # Columns used for encoding
     _encodings = None
     _encoder = None
 
@@ -237,11 +243,11 @@ class DatasetContext:
         test_filename = self._DATAPATH.joinpath("user-anime-test.svmlight").as_posix()
 
         self.log.info("===== Write train libSVM Job =====")
-        with alive_bar() as bar:
+        with alive_bar(spinner="classic") as bar:
             datasets.dump_svmlight_file(X=X[:train_size], y=y[:train_size], f=train_filename)
             bar()
         self.log.info("===== Write test libSVM Job =====")
-        with alive_bar() as bar:
+        with alive_bar(spinner="classic") as bar:
             datasets.dump_svmlight_file(X=X[train_size:], y=y[train_size:], f=test_filename)
             bar()
 
