@@ -84,7 +84,7 @@ class DatasetProcessor:
             ON rate.anime_id = anm.MAL_ID
         """
 
-        type_filter = self.anime_pd.Type == "TV"
+        type_filter = self.anime_pd.Type == "Movie"
         self.anime_pd = self.anime_pd[type_filter]
         self.log.info("===== Join Tables Job =====")
         merge = pd.merge(
@@ -149,7 +149,7 @@ class DatasetContext:
     if not _DATAPATH.exists():
         _DATAPATH.mkdir(parents=True, exist_ok=True)
 
-    _cols = ["user_id", "anime_id"]
+    _cols = ["user_id", "anime_id"]  # columns used for encoding
     _encodings = None
     _encoder = None
 
@@ -183,17 +183,17 @@ class DatasetContext:
             self.log.info("===== Write train CSV Job =====")
 
             with alive_bar(spinner="classic") as bar:
-                df_perm[self._cols].iloc[:train_size].to_csv(train_filename, index=False)
+                df_perm[["rating"] + self._cols].iloc[:train_size].to_csv(train_filename, index=False)
                 bar()
             self.log.info("===== Write test CSV Job =====")
 
             with alive_bar(spinner="classic") as bar:
+                df_perm[["rating"] + self._cols].iloc[train_size:].to_csv(test_filename, index=False)
                 bar()
-            df_perm[self._cols].iloc[train_size:].to_csv(test_filename, index=False)
 
         self._train_size = train_size
 
-    def _one_hot_encode(self):  # TODO: Returning hints
+    def _one_hot_encode(self):  # TODO: type-hints
         """
         Returns:
             + one-hot encodings of the permuted dataset
@@ -248,11 +248,17 @@ class DatasetContext:
     def _create_categorical_mappings(self) -> tuple[pd.DataFrame]:
         unique_users = self.data.user_id.unique()
         unique_anime = self.data.anime_id.unique()
+
+        # We'll use the first user_id and anime_id as placeholders,
+        # to avoid ValueError from the OneHotEncoder
+        user_placeholder = unique_users[0]
+        anime_placeholder = unique_anime[0]
+
         cat_userID_to_userIndex = pd.DataFrame(
-            data={"user_id": unique_users, "anime_id": np.ones(shape=[len(unique_users)], dtype=np.int32)}
+            data={"user_id": unique_users, "anime_id": np.full(len(unique_users), anime_placeholder)}
         )
         cat_animeID_to_animeIndex = pd.DataFrame(
-            data={"user_id": np.ones(shape=[len(unique_anime)], dtype=np.int32), "anime_id": unique_anime}
+            data={"user_id": np.full(len(unique_anime), user_placeholder), "anime_id": unique_anime}
         )
         return cat_userID_to_userIndex, cat_animeID_to_animeIndex
 
