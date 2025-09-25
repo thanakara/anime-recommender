@@ -3,7 +3,6 @@ __pycache__/
 .venv/
 
 structure.txt
-jupyter-space/
 raw/
 train+inference/
 

@@ -1,0 +1,59 @@
+{
+   "strategy": "Bayesian",
+   "training_job_early_stopping": "Off",
+   "warm_start_type": null,
+   "max_number_parallel": 3,
+   "max_total_number_jobs": 33,
+   "tuning_objective_metric": "test:rmse",
+   "training_input_mode": "File",
+   "enable_network_isolation": false,
+   "instance_count": 1,
+   "instance_type": "ml.m5.2xlarge",
+   "additional_volume_size": 30,
+   "volum_encryption_key": null,
+   "max_duration_per_job": 3600,
+   "hyperparameter_cfg": {
+      "_tuning_objective_metric": "test:rmse",
+      "bias_init_method": "normal",
+      "factors_init_method": "normal",
+      "feature_dim": 182794,
+      "linear_init_method": "normal",
+      "num_factors": 8,
+      "predictor_type": "regressor",
+      "bias_lr": {
+         "scaling_type": "Logarithmic",
+         "value_range": [
+            0.01,
+            1
+         ]
+      },
+      "linear_lr": {
+         "scaling_type": "Logarithmic",
+         "value_range": [
+            0.001,
+            1
+         ]
+      },
+      "factors_lr": {
+         "scaling_type": "Logarithmic",
+         "value_range": [
+            0.0001,
+            1
+         ]
+      },
+      "mini_batch_size": {
+         "scaling_type": "Linear",
+         "value_range": [
+            256,
+            1024
+         ]
+      },
+      "epochs": {
+         "scaling_type": "Linear",
+         "value_range": [
+            20,
+            100
+         ]
+      }
+   }
+}

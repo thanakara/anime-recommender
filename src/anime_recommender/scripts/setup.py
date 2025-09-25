@@ -10,7 +10,7 @@ import sagemaker.amazon.common as smac
 from sklearn import datasets, preprocessing
 from alive_progress import alive_bar
 
-from anime_recommender.constants import core
+from anime_recommender.constants import Filepath
 
 
 class DatasetLoader:
@@ -21,7 +21,7 @@ class DatasetLoader:
     def __init__(self, log: logging.Logger, archive_path: Path) -> None:
         self.log = log
         self.archive_path = archive_path
-        self.data_raw = core.Filepath.data_raw
+        self.data_raw = Filepath.data_raw
         self._extracted = False
 
     def _unpack_archive(self) -> None:
@@ -95,10 +95,10 @@ class DatasetProcessor:
         anime_filtered = self._filter_anime_on()
         self.log.info("===== Join Tables Job =====")
         merge = pd.merge(
-            left=anime_filtered[["MAL_ID", "Name", "Genres"]],
-            right=self.ratings_pd[["rating", "user_id", "anime_id"]],
-            left_on="MAL_ID",
-            right_on="anime_id",
+            left=self.ratings_pd[["rating", "user_id", "anime_id"]],
+            right=anime_filtered[["MAL_ID", "Name", "Genres"]],
+            left_on="anime_id",
+            right_on="MAL_ID",
         )
         # Processing the merged table
         merge.rename(
@@ -126,7 +126,7 @@ class DatasetProcessor:
         """
         filename = Path(filename)
         assert filename.suffix == ".csv"
-        train_and_inference_dir = core.Filepath.train_and_inference_dir
+        train_and_inference_dir = Filepath.train_and_inference_dir
         if not train_and_inference_dir.exists():
             train_and_inference_dir.mkdir(parents=True, exist_ok=True)
         fullpath = train_and_inference_dir.joinpath(filename)
@@ -151,7 +151,7 @@ class DatasetContext:
     | Class used to create all the necessary files needed for inference and training |
     +------------------------------------------------------------------------------"""
 
-    _DATAPATH = core.Filepath.train_and_inference_dir
+    _DATAPATH = Filepath.train_and_inference_dir
     if not _DATAPATH.exists():
         _DATAPATH.mkdir(parents=True, exist_ok=True)
 

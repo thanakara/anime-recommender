@@ -5,15 +5,19 @@ import click
 
 from omegaconf import OmegaConf
 
-from anime_recommender.scripts import setup, factory, boto_sdk, callbacks, resolvers
-from anime_recommender.constants import core
+from anime_recommender.constants import Filepath
+from anime_recommender.scripts.setup import DatasetLoader, DatasetProcessor
+from anime_recommender.scripts.factory import context_factory
+from anime_recommender.scripts.boto_sdk import upload_to_s3, create_bucket
+from anime_recommender.scripts.callbacks import EventsCallback
+from anime_recommender.scripts.resolvers import region_name_resolver, execution_role_resolver
 
-callback = callbacks.EventsCallback()
+callback = EventsCallback()
 log = callback.logger
-file_ = core.Filepath.aws_uris_config_path
+file_ = Filepath.aws_uris_config_path
 config = OmegaConf.load(file_=file_)
-OmegaConf.register_new_resolver(name="region_resolver", resolver=resolvers.region_name_resolver)
-OmegaConf.register_new_resolver(name="role_resolver", resolver=resolvers.execution_role_resolver)
+OmegaConf.register_new_resolver(name="region_resolver", resolver=region_name_resolver)
+OmegaConf.register_new_resolver(name="role_resolver", resolver=execution_role_resolver)
 
 
 @click.group()
@@ -44,10 +48,10 @@ def rmtree(path: str, confirm: bool):
 def load(output: str):
     """Unpacks archive, joins the tables and writes CSV file."""
 
-    archive_path = core.Filepath.archive_path
-    ds_loader = setup.DatasetLoader(log=log, archive_path=archive_path)
+    archive_path = Filepath.archive_path
+    ds_loader = DatasetLoader(log=log, archive_path=archive_path)
     anime_pd, ratings_pd = ds_loader.load_pandas_data_frames()
-    ds_processor = setup.DatasetProcessor(log=log, anime_pd=anime_pd, ratings_pd=ratings_pd)
+    ds_processor = DatasetProcessor(log=log, anime_pd=anime_pd, ratings_pd=ratings_pd)
     ds_processor.save_to_csv(filename=output)
 
 
@@ -57,7 +61,7 @@ def load(output: str):
 def split(ratio: float, seed: int):
     """Split the joined table into train/test, then write to CSV."""
 
-    cxt_factory = factory.context_factory(log=log, ratio=ratio, seed=seed)
+    cxt_factory = context_factory(log=log, ratio=ratio, seed=seed)
     _ = cxt_factory.split_and_write_train_test(write=True)
 
 
@@ -67,7 +71,7 @@ def split(ratio: float, seed: int):
 def recordio_format(ratio: float, seed: int):
     """Write RecordIO-protobuf files for training and testing."""
 
-    cxt_factory = factory.context_factory(log=log, ratio=ratio, seed=seed)
+    cxt_factory = context_factory(log=log, ratio=ratio, seed=seed)
     cxt_factory.make_recordio_files()
 
 
@@ -77,7 +81,7 @@ def recordio_format(ratio: float, seed: int):
 def svm_format(ratio: float, seed: int):
     """Write libSVM files for training and testing."""
 
-    cxt_factory = factory.context_factory(log=log, ratio=ratio, seed=seed)
+    cxt_factory = context_factory(log=log, ratio=ratio, seed=seed)
     cxt_factory.make_svmlight_files()
 
 
@@ -87,7 +91,7 @@ def svm_format(ratio: float, seed: int):
 def lookup_files(ratio: float, seed: int):
     """Create two one-hot-encoding lookup files mapping ID --> Index."""
 
-    cxt_factory = factory.context_factory(log=log, ratio=ratio, seed=seed)
+    cxt_factory = context_factory(log=log, ratio=ratio, seed=seed)
     cxt_factory.create_lookup_files()
 
 
@@ -95,7 +99,7 @@ def lookup_files(ratio: float, seed: int):
 def create():
     """Create S3-bucket. Name specified on YAML"""
 
-    boto_sdk.create_bucket(config=config)
+    create_bucket(config=config)
 
 
 @s3.command()
@@ -105,4 +109,4 @@ def upload(filename: str, key: str):
     """Upload file into desired S3-bucket"""
 
     filename = pathlib.Path(filename)
-    boto_sdk.upload_to_s3(config=config, filename=filename, key=key)
+    upload_to_s3(config=config, filename=filename, key=key)
