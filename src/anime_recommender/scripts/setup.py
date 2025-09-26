@@ -68,51 +68,35 @@ class DatasetProcessor:
         self.log = log
         self.anime_pd = anime_pd
         self.ratings_pd = ratings_pd
-
-    def _filter_anime_on(self) -> pd.DataFrame:
-        """Filter out anime by type, year and score."""
-
-        anime_s = self.anime_pd[self.anime_pd.Score != "Unknown"].copy()
-        anime_s.Score = anime_s.Score.astype(float)
-        filter_ = (anime_s.Type == "Movie") & (anime_s.Aired.str.contains("201")) & (anime_s.Score >= 8.5)
-        return anime_s[filter_]
+        self.join_table = None
 
     def _merge(self) -> pd.DataFrame:
-        """
-        SELECT  rate.rating,
-                rate.user_id,
-                rate.anime_id,
-                anm.Name,
-                anm.Genres,
-                anm.Score
+        """Filter users by rating count; Join on anime ID."""
 
-        FROM ratings_pd rate
+        if self.join_table is None:
+            self.log.info("===== Filter users Job =====")
+            by_user = self.ratings_pd.groupby("user_id").agg(anime_id=("anime_id", set), size=("anime_id", "size"))
+            over_3000 = by_user["size"] > 3_000
+            by_user_filtered = by_user[over_3000]
 
-        INNER JOIN anime_pd anm
-            ON rate.anime_id = anm.MAL_ID
-        """
+            self.log.info("===== Join Tables Job =====")
+            double_join = pd.merge(
+                left=self.ratings_pd[["rating", "user_id", "anime_id"]],
+                right=self.anime_pd[["MAL_ID", "Name", "Genres"]],
+                left_on="anime_id",
+                right_on="MAL_ID",
+            )
+            double_join = double_join.rename(columns={"Name": "name", "Genres": "genres"})
+            double_join.drop("MAL_ID", axis=1, inplace=True)
+            double_join.rating = double_join.rating.astype(np.float32)
+            triple_join = by_user_filtered.reset_index().merge(double_join, on="user_id")
+            join_table = triple_join.drop(columns=["anime_id_x", "size"])
+            join_table = join_table.rename(columns={"anime_id_y": "anime_id"})
 
-        anime_filtered = self._filter_anime_on()
-        self.log.info("===== Join Tables Job =====")
-        merge = pd.merge(
-            left=self.ratings_pd[["rating", "user_id", "anime_id"]],
-            right=anime_filtered[["MAL_ID", "Name", "Genres"]],
-            left_on="anime_id",
-            right_on="MAL_ID",
-        )
-        # Processing the merged table
-        merge.rename(
-            columns={
-                "Name": "name",
-                "Genres": "genres",
-            },
-            inplace=True,
-        )
-        merge.drop("MAL_ID", axis=1, inplace=True)
-        merge.rating = merge.rating.astype(np.float32)
-        records, _ = merge.shape
-        self.log.debug(f"Total records: {records:_}")
-        return merge
+            self.log.debug(f"Total Records: {join_table.shape[0]:_}")
+            self.join_table = join_table
+
+        return self.join_table
 
     def save_to_csv(self, filename: str | Path) -> None:
         """
