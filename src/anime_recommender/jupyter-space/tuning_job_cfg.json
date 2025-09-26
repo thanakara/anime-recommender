@@ -16,9 +16,9 @@
       "_tuning_objective_metric": "test:rmse",
       "bias_init_method": "normal",
       "factors_init_method": "normal",
-      "feature_dim": 182794,
+      "feature_dim": 16972,
       "linear_init_method": "normal",
-      "num_factors": 8,
+      "num_factors": 16,
       "predictor_type": "regressor",
       "bias_lr": {
          "scaling_type": "Logarithmic",
@@ -30,8 +30,8 @@
       "linear_lr": {
          "scaling_type": "Logarithmic",
          "value_range": [
-            0.001,
-            1
+            0.0005,
+            0.003
          ]
       },
       "factors_lr": {
@@ -44,15 +44,15 @@
       "mini_batch_size": {
          "scaling_type": "Linear",
          "value_range": [
-            256,
-            1024
+            128,
+            640
          ]
       },
       "epochs": {
          "scaling_type": "Linear",
          "value_range": [
-            20,
-            100
+            10,
+            70
          ]
       }
    }

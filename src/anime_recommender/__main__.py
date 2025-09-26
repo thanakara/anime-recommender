@@ -32,6 +32,12 @@ def s3():
     pass
 
 
+@click.group()
+def job():
+    """SageMaker Job management commands."""
+    pass
+
+
 @data.command()
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
@@ -110,3 +116,10 @@ def upload(filename: str, key: str):
 
     filename = pathlib.Path(filename)
     upload_to_s3(config=config, filename=filename, key=key)
+
+
+@job.command()
+@click.option("-c", "--config", type=click.Path(exists=True), required=True)
+def train(config: str):
+    """Begins the Training job. All kwargs are in the DictConfig"""
+    pass
