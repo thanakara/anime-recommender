@@ -11,7 +11,7 @@ from anime_recommender.scripts.factory import context_factory
 from anime_recommender.scripts.runtime import ARSTrainer, delete_endpoint, create_endpoint_from_training_job
 from anime_recommender.scripts.boto_sdk import upload_to_s3, create_bucket
 from anime_recommender.scripts.callbacks import EventsCallback
-from anime_recommender.scripts.resolvers import region_name_resolver, execution_role_resolver
+from anime_recommender.scripts.resolvers import get_latest_job_name, region_name_resolver, execution_role_resolver
 
 callback = EventsCallback()
 log = callback.logger
@@ -19,6 +19,7 @@ file_ = Filepath.aws_uris_config_path
 config = OmegaConf.load(file_=file_)
 OmegaConf.register_new_resolver(name="region_resolver", resolver=region_name_resolver)
 OmegaConf.register_new_resolver(name="role_resolver", resolver=execution_role_resolver)
+OmegaConf.register_new_resolver(name="latest_job_name", resolver=get_latest_job_name)
 
 
 @click.group()
@@ -134,7 +135,7 @@ def deploy():
     """Creates endpoint from the training job and returns the endpoint name."""
 
     endpoint_name = create_endpoint_from_training_job(config=config)
-    click.echo(f"{endpoint_name} created")
+    click.echo(f"Creating {endpoint_name}")
 
 
 @job.command()

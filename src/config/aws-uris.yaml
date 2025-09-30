@@ -8,6 +8,7 @@ train_key: user-anime-train.recordio
 test_key: user-anime-test.recordio
 
 job_name: fm-anime-recomm
+latest_job_name: ${latest_job_name:}
 endpoint_name: ${oc.select:job_name, ???}
 
 s3_model_output: s3://${s3_bucket_name}/model/
@@ -22,5 +23,5 @@ max_wait: ${oc.select:max_run, ???}
 checkpoint_uri: s3://${s3_bucket_name}/checkpoints/${job_name}
 
 model_name: ${job_name}-model
-endpoint_cfg_name: ${job_name}-endpoint_config
+endpoint_cfg_name: ${job_name}-endpoint-config
 inference_instance_type: ml.m5.large

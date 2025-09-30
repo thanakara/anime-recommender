@@ -23,11 +23,11 @@ class ARSTrainer:
             estimator = sagemaker.estimator.Estimator(
                 image_uri=self._image_uri,
                 role=self.config.role,
-                instance_count=self.config.instace_count,
+                instance_count=self.config.instance_count,
                 instance_type=self.config.instance_type,
                 output_path=self.config.s3_model_output,
                 sagemaker_session=self._sess,
-                base_job_name=self.self.config.job_name,
+                base_job_name=self.config.job_name,
                 use_spot_instances=self.config.use_spot_instances,
                 max_run=self.config.max_run,
                 max_wait=self.config.max_wait,
@@ -41,7 +41,7 @@ class ARSTrainer:
         """Set the hyperparameters after the tuning."""
 
         if self.estimator is None:
-            _ = self._build()
+            self._build()
         params_conf = OmegaConf.load(Filepath.hyperparameters_path)
         params_obj = OmegaConf.to_object(params_conf)
         self.estimator.set_hyperparameters(**params_obj)
@@ -65,16 +65,16 @@ def create_endpoint_from_training_job(config: DictConfig) -> str:
     sm = boto3.client("sagemaker")
 
     # Get job info
-    training_info = sm.describe_training_job(TrainingJobName=config.job_name)
+    training_info = sm.describe_training_job(TrainingJobName=config.latest_job_name)
     model_artifact = training_info["ModelArtifacts"]["S3ModelArtifacts"]
     container_image = training_info["AlgorithmSpecification"]["TrainingImage"]
 
-    # Create the model
-    sm.create_model(
-        ModelName=config.model_name,
-        PrimaryContainer={"Image": container_image, "ModelDataUrl": model_artifact},
-        ExecutionRoleArn=config.role,
-    )
+    # # Create the model
+    # sm.create_model(
+    #     ModelName=config.model_name,
+    #     PrimaryContainer={"Image": container_image, "ModelDataUrl": model_artifact},
+    #     ExecutionRoleArn=config.role,
+    # )
 
     # Create Endpoint configuration
     sm.create_endpoint_config(
