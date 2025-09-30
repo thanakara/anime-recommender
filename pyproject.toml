@@ -24,6 +24,7 @@ dependencies = [
 [project.scripts]
 ars-data = "anime_recommender:__main__.data"
 ars-s3 = "anime_recommender:__main__.s3"
+ars-job = "anime_recommender:__main__.job"
 
 [build-system]
 requires = ["uv_build>=0.8.14,<0.9.0"]
