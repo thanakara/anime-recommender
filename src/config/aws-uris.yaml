@@ -1,18 +1,26 @@
 source: s3
 region: ${region_resolver:}
 role: ${role_resolver:}
-s3_bucket_name: ars-bucket-sagemaker
-train_key: anime/user-anime-train.recordio
-test_key: anime/user-anime-test.recordio
+framework: factorization-machines
 
-job_name: fm-anime-recomm-v1
+s3_bucket_name: ars-bucket-sagemaker
+train_key: user-anime-train.recordio
+test_key: user-anime-test.recordio
+
+job_name: fm-anime-recomm
 endpoint_name: ${oc.select:job_name, ???}
 
 s3_model_output: s3://${s3_bucket_name}/model/
 s3_training_file: s3://${s3_bucket_name}/${train_key}
 s3_test_file: s3://${s3_bucket_name}/${test_key}
 
+instance_count: 1
+instance_type: ml.m5.2xlarge
 use_spot_instances: true
 max_run: 3600
 max_wait: ${oc.select:max_run, ???}
 checkpoint_uri: s3://${s3_bucket_name}/checkpoints/${job_name}
+
+model_name: ${job_name}-model
+endpoint_cfg_name: ${job_name}-endpoint_config
+inference_instance_type: ml.m5.large

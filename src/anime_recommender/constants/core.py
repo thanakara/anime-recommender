@@ -12,3 +12,4 @@ class Filepath:
     config_path: Path = source_dir / "config"
     logging_config_path: Path = config_path.joinpath("log-config.yaml")
     aws_uris_config_path: Path = logging_config_path.with_name("aws-uris.yaml")
+    hyperparameters_path: Path = logging_config_path.with_name("hyperparams.json")

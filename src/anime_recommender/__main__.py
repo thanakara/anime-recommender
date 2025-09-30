@@ -8,6 +8,7 @@ from omegaconf import OmegaConf
 from anime_recommender.constants import Filepath
 from anime_recommender.scripts.setup import DatasetLoader, DatasetProcessor
 from anime_recommender.scripts.factory import context_factory
+from anime_recommender.scripts.runtime import ARSTrainer, delete_endpoint, create_endpoint_from_training_job
 from anime_recommender.scripts.boto_sdk import upload_to_s3, create_bucket
 from anime_recommender.scripts.callbacks import EventsCallback
 from anime_recommender.scripts.resolvers import region_name_resolver, execution_role_resolver
@@ -119,7 +120,26 @@ def upload(filename: str, key: str):
 
 
 @job.command()
-@click.option("-c", "--config", type=click.Path(exists=True), required=True)
-def train(config: str):
+@click.option("-c", "--cfg", type=click.Path(exists=True), required=True)
+def train(cfg: str):
     """Begins the Training job. All kwargs are in the DictConfig"""
-    pass
+
+    config = OmegaConf.load(file_=cfg)
+    trainer = ARSTrainer(config=config)
+    trainer.trainjob()
+
+
+@job.command()
+def deploy():
+    """Creates endpoint from the training job and returns the endpoint name."""
+
+    endpoint_name = create_endpoint_from_training_job(config=config)
+    click.echo(f"{endpoint_name} created")
+
+
+@job.command()
+def cleanup():
+    """Full cleanup of: Endpoint, EndpointConfig and Model."""
+
+    delete_endpoint(config=config)
+    click.echo("Cleanup completed")
